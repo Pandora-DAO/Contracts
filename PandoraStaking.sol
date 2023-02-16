@@ -515,8 +515,8 @@ contract Ownable is IOwnable {
     }
 }
 
-interface IsOHM {
-    function rebase( uint256 ohmProfit_, uint epoch_) external returns (uint256);
+interface IxPDRAI {
+    function rebase( uint256 pdraiProfit_, uint epoch_) external returns (uint256);
 
     function circulatingSupply() external view returns (uint256);
 
@@ -542,8 +542,8 @@ contract SpartacusStaking is Ownable {
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
-    address public immutable OHM;
-    address public immutable sOHM;
+    address public immutable PDRAI;
+    address public immutable xPDRAI;
 
     struct Epoch {
         uint length;
@@ -562,16 +562,16 @@ contract SpartacusStaking is Ownable {
     uint public warmupPeriod;
     
     constructor ( 
-        address _OHM, 
-        address _sOHM, 
+        address _PDRAI, 
+        address _xPDRAI, 
         uint _epochLength,
         uint _firstEpochNumber,
         uint _firstEpochBlock
     ) {
-        require( _OHM != address(0) );
-        OHM = _OHM;
-        require( _sOHM != address(0) );
-        sOHM = _sOHM;
+        require( _PDRAI != address(0) );
+        PDRAI = _PDRAI;
+        require( _xPDRAI != address(0) );
+        xPDRAI = _xPDRAI;
         
         epoch = Epoch({
             length: _epochLength,
@@ -590,50 +590,50 @@ contract SpartacusStaking is Ownable {
     mapping( address => Claim ) public warmupInfo;
 
     /**
-        @notice stake OHM to enter warmup
+        @notice stake PDRAI to enter warmup
         @param _amount uint
         @return bool
      */
     function stake( uint _amount, address _recipient ) external returns ( bool ) {
         rebase();
         
-        IERC20( OHM ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( PDRAI ).safeTransferFrom( msg.sender, address(this), _amount );
 
         Claim memory info = warmupInfo[ _recipient ];
         require( !info.lock, "Deposits for account are locked" );
 
         warmupInfo[ _recipient ] = Claim ({
             deposit: info.deposit.add( _amount ),
-            gons: info.gons.add( IsOHM( sOHM ).gonsForBalance( _amount ) ),
+            gons: info.gons.add( IxPDRAI( xPDRAI ).gonsForBalance( _amount ) ),
             expiry: epoch.number.add( warmupPeriod ),
             lock: false
         });
         
-        IERC20( sOHM ).safeTransfer( warmupContract, _amount );
+        IERC20( xPDRAI ).safeTransfer( warmupContract, _amount );
         return true;
     }
 
     /**
-        @notice retrieve sOHM from warmup
+        @notice retrieve xPDRAI from warmup
         @param _recipient address
      */
     function claim ( address _recipient ) public {
         Claim memory info = warmupInfo[ _recipient ];
         if ( epoch.number >= info.expiry && info.expiry != 0 ) {
             delete warmupInfo[ _recipient ];
-            IWarmup( warmupContract ).retrieve( _recipient, IsOHM( sOHM ).balanceForGons( info.gons ) );
+            IWarmup( warmupContract ).retrieve( _recipient, IxPDRAI( xPDRAI ).balanceForGons( info.gons ) );
         }
     }
 
     /**
-        @notice forfeit sOHM in warmup and retrieve OHM
+        @notice forfeit xPDRAI in warmup and retrieve PDRAI
      */
     function forfeit() external {
         Claim memory info = warmupInfo[ msg.sender ];
         delete warmupInfo[ msg.sender ];
 
-        IWarmup( warmupContract ).retrieve( address(this), IsOHM( sOHM ).balanceForGons( info.gons ) );
-        IERC20( OHM ).safeTransfer( msg.sender, info.deposit );
+        IWarmup( warmupContract ).retrieve( address(this), IxPDRAI( xPDRAI ).balanceForGons( info.gons ) );
+        IERC20( PDRAI ).safeTransfer( msg.sender, info.deposit );
     }
 
     /**
@@ -644,7 +644,7 @@ contract SpartacusStaking is Ownable {
     }
 
     /**
-        @notice redeem sOHM for OHM
+        @notice redeem xPDRAI for PDRAI
         @param _amount uint
         @param _trigger bool
      */
@@ -652,16 +652,16 @@ contract SpartacusStaking is Ownable {
         if ( _trigger ) {
             rebase();
         }
-        IERC20( sOHM ).safeTransferFrom( msg.sender, address(this), _amount );
-        IERC20( OHM ).safeTransfer( msg.sender, _amount );
+        IERC20( xPDRAI ).safeTransferFrom( msg.sender, address(this), _amount );
+        IERC20( PDRAI ).safeTransfer( msg.sender, _amount );
     }
 
     /**
-        @notice returns the sOHM index, which tracks rebase growth
+        @notice returns the xPDRAI index, which tracks rebase growth
         @return uint
      */
     function index() public view returns ( uint ) {
-        return IsOHM( sOHM ).index();
+        return IxPDRAI( xPDRAI ).index();
     }
 
     /**
@@ -670,7 +670,7 @@ contract SpartacusStaking is Ownable {
     function rebase() public {
         if( epoch.endBlock <= block.number ) {
 
-            IsOHM( sOHM ).rebase( epoch.distribute, epoch.number );
+            IxPDRAI( xPDRAI ).rebase( epoch.distribute, epoch.number );
 
             epoch.endBlock = epoch.endBlock.add( epoch.length );
             epoch.number++;
@@ -680,7 +680,7 @@ contract SpartacusStaking is Ownable {
             }
 
             uint balance = contractBalance();
-            uint staked = IsOHM( sOHM ).circulatingSupply();
+            uint staked = IxPDRAI( xPDRAI ).circulatingSupply();
 
             if( balance <= staked ) {
                 epoch.distribute = 0;
@@ -691,11 +691,11 @@ contract SpartacusStaking is Ownable {
     }
 
     /**
-        @notice returns contract OHM holdings, including bonuses provided
+        @notice returns contract PDRAI holdings, including bonuses provided
         @return uint
      */
     function contractBalance() public view returns ( uint ) {
-        return IERC20( OHM ).balanceOf( address(this) ).add( totalBonus );
+        return IERC20( PDRAI ).balanceOf( address(this) ).add( totalBonus );
     }
 
     /**
@@ -705,7 +705,7 @@ contract SpartacusStaking is Ownable {
     function giveLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.add( _amount );
-        IERC20( sOHM ).safeTransfer( locker, _amount );
+        IERC20( xPDRAI ).safeTransfer( locker, _amount );
     }
 
     /**
@@ -715,7 +715,7 @@ contract SpartacusStaking is Ownable {
     function returnLockBonus( uint _amount ) external {
         require( msg.sender == locker );
         totalBonus = totalBonus.sub( _amount );
-        IERC20( sOHM ).safeTransferFrom( locker, address(this), _amount );
+        IERC20( xPDRAI ).safeTransferFrom( locker, address(this), _amount );
     }
 
     enum CONTRACTS { DISTRIBUTOR, WARMUP, LOCKER }
