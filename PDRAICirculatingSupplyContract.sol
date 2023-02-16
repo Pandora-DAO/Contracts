@@ -285,9 +285,9 @@ contract SPACirculatingSupplyContract {
 
     bool public isInitialized;
 
-    address public OHM;
+    address public PDRAI;
     address public owner;
-    address[] public nonCirculatingOHMAddresses;
+    address[] public nonCirculatingPDRAIAddresses;
 
     constructor( address _owner ) {        
         owner = _owner;
@@ -297,34 +297,34 @@ contract SPACirculatingSupplyContract {
         require( msg.sender == owner, "caller is not owner" );
         require( isInitialized == false );
 
-        OHM = _ohm;
+        PDRAI = _pdrai;
 
         isInitialized = true;
 
         return true;
     }
 
-    function OHMCirculatingSupply() external view returns ( uint ) {
-        uint _totalSupply = IERC20( OHM ).totalSupply();
+    function PDRAICirculatingSupply() external view returns ( uint ) {
+        uint _totalSupply = IERC20( PDRAI ).totalSupply();
 
-        uint _circulatingSupply = _totalSupply.sub( getNonCirculatingOHM() );
+        uint _circulatingSupply = _totalSupply.sub( getNonCirculatingPDRAI() );
 
         return _circulatingSupply;
     }
 
-    function getNonCirculatingOHM() public view returns ( uint ) {
-        uint _nonCirculatingOHM;
+    function getNonCirculatingPDRAI() public view returns ( uint ) {
+        uint _nonCirculatingPDRAI;
 
-        for( uint i=0; i < nonCirculatingOHMAddresses.length; i = i.add( 1 ) ) {
-            _nonCirculatingOHM = _nonCirculatingOHM.add( IERC20( OHM ).balanceOf( nonCirculatingOHMAddresses[i] ) );
+        for( uint i=0; i < nonCirculatingPDRAIAddresses.length; i = i.add( 1 ) ) {
+            _nonCirculatingPDRAI = _nonCirculatingPDRAI.add( IERC20( PDRAI ).balanceOf( nonCirculatingPDRAIAddresses[i] ) );
         }
 
-        return _nonCirculatingOHM;
+        return _nonCirculatingPDRAI;
     }
 
-    function setNonCirculatingOHMAddresses( address[] calldata _nonCirculatingAddresses ) external returns ( bool ) {
+    function setNonCirculatingPDRAIAddresses( address[] calldata _nonCirculatingAddresses ) external returns ( bool ) {
         require( msg.sender == owner, "Sender is not owner" );
-        nonCirculatingOHMAddresses = _nonCirculatingAddresses;
+        nonCirculatingPDRAIAddresses = _nonCirculatingAddresses;
 
         return true;
     }
