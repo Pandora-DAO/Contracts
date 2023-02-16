@@ -336,7 +336,7 @@ contract StakingDistributor is Policy {
     
     /* ====== VARIABLES ====== */
 
-    address public immutable OHM;
+    address public immutable PDRAI;
     address public immutable treasury;
     
     uint public immutable epochLength;
@@ -367,7 +367,7 @@ contract StakingDistributor is Policy {
         require( _treasury != address(0) );
         treasury = _treasury;
         require( _ohm != address(0) );
-        OHM = _ohm;
+        PDRAI = _pdrai;
         epochLength = _epochLength;
         nextEpochBlock = _nextEpochBlock;
     }
@@ -433,7 +433,7 @@ contract StakingDistributor is Policy {
         @return uint
      */
     function nextRewardAt( uint _rate ) public view returns ( uint ) {
-        return IERC20( OHM ).totalSupply().mul( _rate ).div( 1000000 );
+        return IERC20( PDRAI ).totalSupply().mul( _rate ).div( 1000000 );
     }
 
     /**
