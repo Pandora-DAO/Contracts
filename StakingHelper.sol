@@ -82,18 +82,18 @@ interface IStaking {
 contract StakingHelper {
 
     address public immutable staking;
-    address public immutable OHM;
+    address public immutable PDRAI;
 
-    constructor ( address _staking, address _OHM ) {
+    constructor ( address _staking, address _PDRAI ) {
         require( _staking != address(0) );
         staking = _staking;
-        require( _OHM != address(0) );
-        OHM = _OHM;
+        require( _PDRAI != address(0) );
+        PDRAI = _PDRAI;
     }
 
     function stake( uint _amount ) external {
-        IERC20( OHM ).transferFrom( msg.sender, address(this), _amount );
-        IERC20( OHM ).approve( staking, _amount );
+        IERC20( PDRAI ).transferFrom( msg.sender, address(this), _amount );
+        IERC20( PDRAI ).approve( staking, _amount );
         IStaking( staking ).stake( _amount, msg.sender );
         IStaking( staking ).claim( msg.sender );
     }
