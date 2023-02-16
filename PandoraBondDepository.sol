@@ -6,8 +6,7 @@ interface IOwnable {
 
   function renounceManagement() external;
   
-  function pushManagement( address newOwner_ ) external;
-  
+  function pushManagement( address neHM
   function pullManagement() external;
 }
 
@@ -623,9 +622,9 @@ contract SpartacusBondDepository is Ownable {
 
     /* ======== STATE VARIABLES ======== */
 
-    address public immutable OHM; // token given as payment for bond
+    address public immutable PDRAI; // token given as payment for bond
     address public immutable principle; // token used to create bond
-    address public immutable treasury; // mints OHM when receives principle
+    address public immutable treasury; // mints PDRAI when receives principle
     address public immutable DAO; // receives profit share from bond
 
     bool public immutable isLiquidityBond; // LP and Reserve bonds are treated slightly different
@@ -660,7 +659,7 @@ contract SpartacusBondDepository is Ownable {
 
     // Info for bond holder
     struct Bond {
-        uint payout; // OHM remaining to be paid
+        uint payout; // PDRAI remaining to be paid
         uint vesting; // Blocks left to vest
         uint lastBlock; // Last interaction
         uint pricePaid; // In DAI, for front end viewing
@@ -681,14 +680,14 @@ contract SpartacusBondDepository is Ownable {
     /* ======== INITIALIZATION ======== */
 
     constructor ( 
-        address _OHM,
+        address _PDRAI,
         address _principle,
         address _treasury, 
         address _DAO, 
         address _bondCalculator
     ) {
-        require( _OHM != address(0) );
-        OHM = _OHM;
+        require( _PDRAI != address(0) );
+        PDRAI = _PDRAI;
         require( _principle != address(0) );
         principle = _principle;
         require( _treasury != address(0) );
@@ -828,7 +827,7 @@ contract SpartacusBondDepository is Ownable {
         uint value = ITreasury( treasury ).valueOf( principle, _amount );
         uint payout = payoutFor( value ); // payout to bonder is computed
 
-        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 OHM ( underflow protection )
+        require( payout >= 10000000, "Bond too small" ); // must be > 0.01 PDRAI ( underflow protection )
         require( payout <= maxPayout(), "Bond too large"); // size protection because there is no slippage
 
         // profits are calculated
@@ -838,14 +837,14 @@ contract SpartacusBondDepository is Ownable {
         /**
             principle is transferred in
             approved and
-            deposited into the treasury, returning (_amount - profit) OHM
+            deposited into the treasury, returning (_amount - profit) PDRAI
          */
         IERC20( principle ).safeTransferFrom( msg.sender, address(this), _amount );
         IERC20( principle ).approve( address( treasury ), _amount );
         ITreasury( treasury ).deposit( _amount, principle, profit );
         
         if ( fee != 0 ) { // fee is transferred to dao 
-            IERC20( OHM ).safeTransfer( DAO, fee ); 
+            IERC20( PDRAI ).safeTransfer( DAO, fee ); 
         }
         
         // total debt is increased
@@ -912,13 +911,13 @@ contract SpartacusBondDepository is Ownable {
      */
     function stakeOrSend( address _recipient, bool _stake, uint _amount ) internal returns ( uint ) {
         if ( !_stake ) { // if user does not want to stake
-            IERC20( OHM ).transfer( _recipient, _amount ); // send payout
+            IERC20( PDRAI ).transfer( _recipient, _amount ); // send payout
         } else { // if user wants to stake
             if ( useHelper ) { // use if staking warmup is 0
-                IERC20( OHM ).approve( stakingHelper, _amount );
+                IERC20( PDRAI ).approve( stakingHelper, _amount );
                 IStakingHelper( stakingHelper ).stake( _amount, _recipient );
             } else {
-                IERC20( OHM ).approve( staking, _amount );
+                IERC20( PDRAI ).approve( staking, _amount );
                 IStaking( staking ).stake( _amount, _recipient );
             }
         }
@@ -966,7 +965,7 @@ contract SpartacusBondDepository is Ownable {
      *  @return uint
      */
     function maxPayout() public view returns ( uint ) {
-        return IERC20( OHM ).totalSupply().mul( terms.maxPayout ).div( 100000 );
+        return IERC20( PDRAI ).totalSupply().mul( terms.maxPayout ).div( 100000 );
     }
 
     /**
@@ -1017,11 +1016,11 @@ contract SpartacusBondDepository is Ownable {
 
 
     /**
-     *  @notice calculate current ratio of debt to OHM supply
+     *  @notice calculate current ratio of debt to PDRAI supply
      *  @return debtRatio_ uint
      */
     function debtRatio() public view returns ( uint debtRatio_ ) {   
-        uint supply = IERC20( OHM ).totalSupply();
+        uint supply = IERC20( PDRAI ).totalSupply();
         debtRatio_ = FixedPoint.fraction( 
             currentDebt().mul( 1e9 ), 
             supply
@@ -1079,7 +1078,7 @@ contract SpartacusBondDepository is Ownable {
     }
 
     /**
-     *  @notice calculate amount of OHM available for claim by depositor
+     *  @notice calculate amount of PDRAI available for claim by depositor
      *  @param _depositor address
      *  @return pendingPayout_ uint
      */
@@ -1100,11 +1099,11 @@ contract SpartacusBondDepository is Ownable {
     /* ======= AUXILLIARY ======= */
 
     /**
-     *  @notice allow anyone to send lost tokens (excluding principle or OHM) to the DAO
+     *  @notice allow anyone to send lost tokens (excluding principle or PDRAI) to the DAO
      *  @return bool
      */
     function recoverLostToken( address _token ) external returns ( bool ) {
-        require( _token != OHM );
+        require( _token != PDRAI );
         require( _token != principle );
         IERC20( _token ).safeTransfer( DAO, IERC20( _token ).balanceOf( address(this) ) );
         return true;
