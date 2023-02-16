@@ -192,7 +192,7 @@ interface IERC20Mintable {
   function mint( address account_, uint256 ammount_ ) external;
 }
 
-interface IOHMERC20 {
+interface IPDRAIERC20 {
     function burnFrom(address account_, uint256 amount_) external;
 }
 
@@ -218,7 +218,7 @@ contract SpartacusTreasury is Ownable {
 
     enum MANAGING { RESERVEDEPOSITOR, RESERVESPENDER, RESERVETOKEN, RESERVEMANAGER, LIQUIDITYDEPOSITOR, LIQUIDITYTOKEN, LIQUIDITYMANAGER, DEBTOR, REWARDMANAGER, SOHM }
 
-    address public immutable OHM;
+    address public immutable PDRAI;
     uint public immutable blocksNeededForQueue;
 
     address[] public reserveTokens; // Push only, beware false-positives.
@@ -260,32 +260,32 @@ contract SpartacusTreasury is Ownable {
     mapping( address => bool ) public isRewardManager;
     mapping( address => uint ) public rewardManagerQueue; // Delays changes to mapping.
 
-    address public sOHM;
-    uint public sOHMQueue; // Delays change to sOHM address
+    address public xPDRAI;
+    uint public xPDRAIQueue; // Delays change to xPDRAI address
     
     uint public totalReserves; // Risk-free value of all assets
     uint public totalDebt;
 
     constructor (
-        address _OHM,
+        address _PDRAI,
         address _DAI,
-        address _OHMDAI,
+        address _PDRAIDAI,
         uint _blocksNeededForQueue
     ) {
-        require( _OHM != address(0) );
-        OHM = _OHM;
+        require( _PDRAI != address(0) );
+        PDRAI = _PDRAI;
 
         isReserveToken[ _DAI ] = true;
         reserveTokens.push( _DAI );
 
-        isLiquidityToken[ _OHMDAI ] = true;
-        liquidityTokens.push( _OHMDAI );
+        isLiquidityToken[ _PDRAIDAI ] = true;
+        liquidityTokens.push( _PDRAIDAI );
 
         blocksNeededForQueue = _blocksNeededForQueue;
     }
 
     /**
-        @notice allow approved address to deposit an asset for OHM
+        @notice allow approved address to deposit an asset for PDRAI
         @param _amount uint
         @param _token address
         @param _profit uint
@@ -302,9 +302,9 @@ contract SpartacusTreasury is Ownable {
         }
 
         uint value = valueOf(_token, _amount);
-        // mint OHM needed and store amount of rewards for distribution
+        // mint PDRAI needed and store amount of rewards for distribution
         send_ = value.sub( _profit );
-        IERC20Mintable( OHM ).mint( msg.sender, send_ );
+        IERC20Mintable( PDRAI ).mint( msg.sender, send_ );
 
         totalReserves = totalReserves.add( value );
         emit ReservesUpdated( totalReserves );
@@ -313,7 +313,7 @@ contract SpartacusTreasury is Ownable {
     }
 
     /**
-        @notice allow approved address to burn OHM for reserves
+        @notice allow approved address to burn PDRAI for reserves
         @param _amount uint
         @param _token address
      */
@@ -322,7 +322,7 @@ contract SpartacusTreasury is Ownable {
         require( isReserveSpender[ msg.sender ] == true, "Not approved" );
 
         uint value = valueOf( _token, _amount );
-        IOHMERC20( OHM ).burnFrom( msg.sender, value );
+        IPDRAIERC20( PDRAI ).burnFrom( msg.sender, value );
 
         totalReserves = totalReserves.sub( value );
         emit ReservesUpdated( totalReserves );
@@ -343,7 +343,7 @@ contract SpartacusTreasury is Ownable {
 
         uint value = valueOf( _token, _amount );
 
-        uint maximumDebt = IERC20( sOHM ).balanceOf( msg.sender ); // Can only borrow against sOHM held
+        uint maximumDebt = IERC20( xPDRAI ).balanceOf( msg.sender ); // Can only borrow against xPDRAI held
         uint availableDebt = maximumDebt.sub( debtorBalance[ msg.sender ] );
         require( value <= availableDebt, "Exceeds debt limit" );
 
@@ -380,18 +380,18 @@ contract SpartacusTreasury is Ownable {
     }
 
     /**
-        @notice allow approved address to repay borrowed reserves with OHM
+        @notice allow approved address to repay borrowed reserves with PDRAI
         @param _amount uint
      */
-    function repayDebtWithOHM( uint _amount ) external {
+    function repayDebtWithPDRAI( uint _amount ) external {
         require( isDebtor[ msg.sender ], "Not approved" );
 
-        IOHMERC20( OHM ).burnFrom( msg.sender, _amount );
+        IPDRAIERC20( PDRAI ).burnFrom( msg.sender, _amount );
 
         debtorBalance[ msg.sender ] = debtorBalance[ msg.sender ].sub( _amount );
         totalDebt = totalDebt.sub( _amount );
 
-        emit RepayDebt( msg.sender, OHM, _amount, _amount );
+        emit RepayDebt( msg.sender, PDRAI, _amount, _amount );
     }
 
     /**
@@ -424,7 +424,7 @@ contract SpartacusTreasury is Ownable {
         require( isRewardManager[ msg.sender ], "Not approved" );
         require( _amount <= excessReserves(), "Insufficient reserves" );
 
-        IERC20Mintable( OHM ).mint( _recipient, _amount );
+        IERC20Mintable( PDRAI ).mint( _recipient, _amount );
 
         emit RewardsMinted( msg.sender, _recipient, _amount );
     } 
@@ -434,7 +434,7 @@ contract SpartacusTreasury is Ownable {
         @return uint
      */
     function excessReserves() public view returns ( uint ) {
-        return totalReserves.sub( IERC20( OHM ).totalSupply().sub( totalDebt ) );
+        return totalReserves.sub( IERC20( PDRAI ).totalSupply().sub( totalDebt ) );
     }
 
     /**
@@ -459,15 +459,15 @@ contract SpartacusTreasury is Ownable {
     }
 
     /**
-        @notice returns OHM valuation of asset
+        @notice returns PDRAI valuation of asset
         @param _token address
         @param _amount uint
         @return value_ uint
      */
     function valueOf( address _token, uint _amount ) public view returns ( uint value_ ) {
         if ( isReserveToken[ _token ] ) {
-            // convert amount to match OHM decimals
-            value_ = _amount.mul( 10 ** IERC20( OHM ).decimals() ).div( 10 ** IERC20( _token ).decimals() );
+            // convert amount to match PDRAI decimals
+            value_ = _amount.mul( 10 ** IERC20( PDRAI ).decimals() ).div( 10 ** IERC20( _token ).decimals() );
         } else if ( isLiquidityToken[ _token ] ) {
             value_ = IBondCalculator( bondCalculator[ _token ] ).valuation( _token, _amount );
         }
@@ -499,8 +499,8 @@ contract SpartacusTreasury is Ownable {
             debtorQueue[ _address ] = block.number.add( blocksNeededForQueue );
         } else if ( _managing == MANAGING.REWARDMANAGER ) { // 8
             rewardManagerQueue[ _address ] = block.number.add( blocksNeededForQueue );
-        } else if ( _managing == MANAGING.SOHM ) { // 9
-            sOHMQueue = block.number.add( blocksNeededForQueue );
+        } else if ( _managing == MANAGING.XPDRAI ) { // 9
+            xPDRAIQueue = block.number.add( blocksNeededForQueue );
         } else return false;
 
         emit ChangeQueued( _managing, _address );
@@ -610,9 +610,9 @@ contract SpartacusTreasury is Ownable {
             result = !isRewardManager[ _address ];
             isRewardManager[ _address ] = result;
 
-        } else if ( _managing == MANAGING.SOHM ) { // 9
-            sOHMQueue = 0;
-            sOHM = _address;
+        } else if ( _managing == MANAGING.XPDRAI ) { // 9
+            xPDRAIQueue = 0;
+            xPDRAI = _address;
             result = true;
 
         } else return false;
